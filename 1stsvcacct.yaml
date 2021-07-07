@@ -1,0 +1,69 @@
+---
+AWSTemplateFormatVersion: '2021-07-10
+Description: CloudFormation Service Role and Policy
+
+Metadata:
+  Author: HelenaRoberts
+  Url: https://aws.nz/best-practice/cloudformation-service-roles/
+
+Parameters:
+  RoleName:
+    Description: IAM Role name
+    Type: String
+    Default: svcCloudFormation
+
+  PolicyName:
+    Description: IAM Policy name
+    Type: String
+    Default: svcCloudFormation
+
+Resources:
+  CfnServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      Path: /service/
+      AssumeRolePolicyDocument:
+        Version: 2021-07-10
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: cloudformation.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CfnUserPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Ref PolicyName
+      Description: User policy for creating CFN stacks with the use of svcCloudFormation role.
+      Path: /
+      PolicyDocument:
+        Version: 2021-07-10
+        Statement:
+        - Action:
+          - iam:PassRole
+          Effect: Allow
+          Resource:
+          - !GetAtt CfnServiceRole.Arn
+        - Action:
+          - cloudformation:CreateUploadBucket
+          - cloudformation:CreateStack
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - s3:PutObject
+          - s3:GetObject
+          - s3:ListBucket
+          Effect: Allow
+          Resource:
+          - arn:aws:s3:::cf-templates-*
+          - arn:aws:s3:::cf-templates-*/*
+
+Outputs:
+  CfnServiceRoleArn:
+    Value: !GetAtt CfnServiceRole.Arn
+
+  CfnUserPolicyArn:
+    Value: !Ref CfnUserPolicy
